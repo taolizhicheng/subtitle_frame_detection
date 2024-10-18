@@ -1,0 +1,118 @@
+DATASET:
+  TRAIN:
+    NAME: SimulatedSubtitleFrameDetectionDataset
+    ARGS:
+      video_dir: !env ${DATA_DIR}/video
+      intervals: 5
+      select_range: [0, 1, 0, 0.8]
+      image_size: [960, 320]
+      text_dir: !env ${DATA_DIR}/text
+      text_length_range: [1, 20]
+      font_dir: !env ${DATA_DIR}/font
+      font_size_range: [25, 50]
+      PREPROCESSOR:
+        NAME: SubtitleFrameDetectionPreprocessor
+        ARGS:
+          image_width: 960
+          image_height: 320
+          add_positions: True
+      TRANSFORMS:
+        - NAME: SubtitleFrameDetectionNoise
+          ARGS:
+            lower_noise: -20
+            upper_noise: 20
+        - NAME: SubtitleFrameDetectionNormalize
+          ARGS:
+            mean: [0, 0, 0]
+            std: [255, 255, 255]
+        - NAME: SubtitleFrameDetectionConcat
+          ARGS: {}
+        - NAME: SubtitleFrameDetectionTranspose
+          ARGS: {}
+        - NAME: SubtitleFrameDetectionToTensor
+          ARGS: {}
+  TEST:
+    NAME: GTSubtitleFrameDetectionDataset
+    ARGS:
+      video_dir: !env ${DATA_DIR}/video
+      intervals: 5
+      roi: [0.2, 0.8, 0.8, 1]
+      label_dir: !env ${DATA_DIR}/label
+      PREPROCESSOR:
+        NAME: SubtitleFrameDetectionPreprocessor
+        ARGS:
+          image_width: 960
+          image_height: 320
+          add_positions: True
+      TRANSFORMS:
+        - NAME: SubtitleFrameDetectionNormalize
+          ARGS:
+            mean: [0, 0, 0]
+            std: [255, 255, 255]
+        - NAME: SubtitleFrameDetectionConcat
+          ARGS: {}
+        - NAME: SubtitleFrameDetectionTranspose
+          ARGS: {}
+        - NAME: SubtitleFrameDetectionToTensor
+          ARGS: {}
+MODEL:
+  NAME: SubtitleFrameDetectionModel
+  ARGS:
+    device: cuda
+    input_channels: 8
+    block: BasicBlock
+    layers: [2, 2, 2, 2]
+    num_classes: 1000
+    dcn: null
+    stage_with_dcn: (False, False, False, False)
+
+LOSS:
+  NAME: SubtitleFrameDetectionLoss
+  ARGS: 
+    coord_loss_weight: 0.1
+    code_loss_weight: 1.0
+
+OPTIMIZER:
+  NAME: SGD
+  ARGS:
+    lr: 0.001
+    momentum: 0.9
+    weight_decay: 0.0001
+
+SCHEDULER:
+  NAME: SubtitleFrameDetectionScheduler
+  ARGS:
+    warmup_steps: 1000
+    cosine_decay_steps: 20000
+    cosine_eta_min: 0.00003
+
+POSTPROCESSOR:
+  NAME: SubtitleFrameDetectionPostprocessor
+  ARGS: {}
+
+METRIC:
+  NAME: SubtitleFrameDetectionMetric
+  ARGS: 
+    score_threshold: 0.5
+    iou_threshold: 0.5
+
+HYPER:
+  TRAIN:
+    epochs: 20
+    batch_size: 16
+    num_workers: 4
+    pin_memory: True
+    drop_last: True
+    shuffle: True
+  TEST:
+    batch_size: 16
+    num_workers: 4
+    pin_memory: True
+    drop_last: True
+    shuffle: False
+  OTHERS:
+    summary_dir: !env ${OUTPUT_DIR}/runs
+    checkpoint_dir: !env ${OUTPUT_DIR}/checkpoints
+    checkpoint_name: "checkpoint"
+    show_progress: True
+    log_dir: !env ${OUTPUT_DIR}/logs
