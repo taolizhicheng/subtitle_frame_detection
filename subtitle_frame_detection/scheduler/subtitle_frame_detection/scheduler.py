@@ -23,6 +23,19 @@ class SubtitleFrameDetectionScheduler(BaseScheduler):
             **kwargs
         )
 
+    def lr_warmup(self, epoch):
+        if epoch < self.warmup_steps:
+            return float(epoch + 1) / float(self.warmup_steps)
+        return 1.0
+
+    def build_scheduler(
+        self,
+        optimizer: BaseOptimizer,
+        warmup_steps: int, 
+        cosine_decay_steps: int,
+        cosine_eta_min: float = 0.0,
+        **kwargs
+    ):
         self.warmup_steps = warmup_steps
         self.cosine_decay_steps = cosine_decay_steps
         self.cosine_eta_min = cosine_eta_min
@@ -32,11 +45,6 @@ class SubtitleFrameDetectionScheduler(BaseScheduler):
 
         # 定义衰减 scheduler
         self.cosine_scheduler = CosineAnnealingLR(optimizer, T_max=cosine_decay_steps, eta_min=cosine_eta_min)
-
-    def lr_warmup(self, epoch):
-        if epoch < self.warmup_steps:
-            return float(epoch + 1) / float(self.warmup_steps)
-        return 1.0
 
     def step(self):
         self.current_step += 1

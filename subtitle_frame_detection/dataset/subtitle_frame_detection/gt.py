@@ -9,6 +9,7 @@ from typing import List
 from practices.dataset.base.base_dataset import BaseDataset
 from .. import DATASET_BUILDER
 from .video import VideoFrameDataset
+from . import SubtitlePairCode
 
 
 __all__ = ["GTSubtitleFrameDetectionDataset"]
@@ -123,15 +124,15 @@ class GTSubtitleFrameDetectionDataset(BaseDataset):
             cy = sy + h / 2 - y1
 
         if text1 is None and text2 is None:
-            label = [-100, -100, -100, -100, 0]
+            label = [-100, -100, -100, -100, SubtitlePairCode.NF1_NF2]
         elif text1 is None and text2 is not None:
-            label = [cx, cy, w, h, 0]
+            label = [cx, cy, w, h, SubtitlePairCode.NF1_F2]
         elif text1 is not None and text2 is None:
-            label = [-100, -100, -100, -100, 0]
+            label = [-100, -100, -100, -100, SubtitlePairCode.F1_NF2]
         elif text1 == text2:
-            label = [cx, cy, w, h, 1]
+            label = [cx, cy, w, h, SubtitlePairCode.F1_F2_SAME]
         else:
-            label = [cx, cy, w, h, 0]
+            label = [cx, cy, w, h, SubtitlePairCode.F1_F2_DIFF]
 
         label = np.array(label, dtype=np.float32)
         
@@ -147,6 +148,19 @@ class GTSubtitleFrameDetectionDataset(BaseDataset):
         draw = frame2.copy()
         if x1 > 0:
             draw = cv2.rectangle(draw, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+        if code == SubtitlePairCode.NF1_NF2:
+            print("帧1和帧2都没有字幕")
+        elif code == SubtitlePairCode.NF1_F2:
+            print("帧1没有字幕，帧2有字幕")
+        elif code == SubtitlePairCode.F1_NF2:
+            print("帧1有字幕，帧2没有字幕")
+        elif code == SubtitlePairCode.F1_F2_DIFF:
+            print("帧1和帧2都有字幕，但字幕不同")
+        elif code == SubtitlePairCode.F1_F2_SAME:
+            print("帧1和帧2都有字幕，且字幕相同")
+        else:
+            raise ValueError("Invalid code")
 
         plt.imshow(frame1[:, :, ::-1], cmap="gray")
         plt.show()

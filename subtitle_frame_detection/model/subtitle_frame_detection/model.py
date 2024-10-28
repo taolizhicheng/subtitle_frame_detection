@@ -7,11 +7,19 @@ from practices.model.backbone.resnet import ResNet, BasicBlock, Bottleneck
 from .. import MODEL_BUILDER
 
 
+__all__ = [
+    "SubtitleFrameDetectionModel"
+]
+def __dir__():
+    return __all__
+
+
 @MODEL_BUILDER.register("SubtitleFrameDetectionModel")
 class SubtitleFrameDetectionModel(BaseModel):
     def __init__(
         self, 
         device,
+        model_path=None,
         input_channels=8,
         block = "BasicBlock",
         layers = [2, 2, 2, 2],
@@ -21,6 +29,7 @@ class SubtitleFrameDetectionModel(BaseModel):
     ):
         super().__init__(
             device=device,
+            model_path=model_path,
             input_channels=input_channels,
             block=block,
             layers=layers,
@@ -57,7 +66,10 @@ class SubtitleFrameDetectionModel(BaseModel):
         x4 = nn.functional.relu(x4)
 
         x = x1 + x2 + x3 + x4
-        x = self.fc(x)
+        coord = self.coord_fc(x)
+        code = self.code_fc(x)
+
+        x = torch.cat([coord, code], dim=1)
         return x
 
     def build_model(
@@ -85,4 +97,5 @@ class SubtitleFrameDetectionModel(BaseModel):
         self.fc3 = torch.nn.Linear(256, 512)
         self.avgpool4 = torch.nn.AdaptiveAvgPool2d((1, 1))
         self.fc4 = torch.nn.Linear(512, 512)
-        self.fc = torch.nn.Linear(512, 5)
+        self.coord_fc = torch.nn.Linear(512, 4)
+        self.code_fc = torch.nn.Linear(512, 5)

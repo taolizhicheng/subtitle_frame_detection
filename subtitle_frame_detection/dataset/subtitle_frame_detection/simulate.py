@@ -229,6 +229,7 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
         self.load_images(0)
         self.load_texts(0)
         self.load_font(0)
+        self.load_data()
 
     def load_images(self, index: int):
         video_path = self.video_paths[index]
@@ -281,6 +282,56 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
         font_size = np.random.randint(self.font_size_range[0], self.font_size_range[1])
         self.font = ImageFont.truetype(font_path, font_size)
 
+    def load_single_data(self, i: int):
+        font_index = np.random.randint(0, len(self.font_paths))
+        self.load_font(font_index)
+
+        frame1 = self.images[i]
+        frame2 = self.images[i + 1]
+
+        code = np.random.randint(0, 5)
+        text1 = np.random.choice(self.texts)
+        text2 = np.random.choice(self.texts)
+
+        if code == SubtitlePairCode.NF1_NF2:
+            text1 = text2 = None
+        elif code == SubtitlePairCode.NF1_F2:
+            text1 = None
+        elif code == SubtitlePairCode.F1_NF2:
+            text2 = None
+        elif code == SubtitlePairCode.F1_F2_DIFF:
+            if text1 == text2:
+                while text1 == text2:
+                    text2 = np.random.choice(self.texts)
+        elif code == SubtitlePairCode.F1_F2_SAME:
+            text2 = text1
+        else:
+            raise ValueError("Invalid code")
+
+        cx, cy = self.image_size[0] // 2, self.image_size[1] // 2
+        cx = np.random.randint(cx - 10, cx + 10)
+        cy = np.random.randint(cy - 80, cy + 80)
+
+        frame1, text1, bbox1, char_bboxes1 = add_text_to_image(frame1, text1, self.font, (cx, cy))
+        frame2, text2, bbox2, char_bboxes2 = add_text_to_image(frame2, text2, self.font, (cx, cy))
+
+        if bbox2 is not None:
+            label = [*bbox2, code]
+        else:
+            label = [-100, -100, -100, -100, code]
+
+        frame = np.concatenate([frame1, frame2], axis=-1)
+        label = np.array(label, dtype=np.float32)
+
+        self.data[i] = frame
+        self.labels[i] = label
+
+    def load_data(self):
+        self.data = np.zeros((len(self.images) - 1, self.image_size[1], self.image_size[0], 6), dtype=np.uint8)
+        self.labels = np.zeros((len(self.images) - 1, 5), dtype=np.float32)
+        for i in range(len(self.data)):
+            self.load_single_data(i)
+
     def random_load(self):
         image_index = np.random.randint(0, len(self.video_paths))
         text_index = np.random.randint(0, len(self.text_paths))
@@ -295,55 +346,16 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
                 text_index = np.random.randint(0, len(self.text_paths))
         
         self.load_font(font_index)
+        self.load_data()
 
     def __len__(self):
-        return len(self.images) - 1
+        return len(self.data)
     
     def get_data(self, index: int):
-        self.load_font(np.random.randint(0, len(self.font_paths)))
-        
-        frame1 = self.images[index]
-        frame2 = self.images[index + 1]
-
-        code = np.random.randint(0, 5)
-        text1 = np.random.choice(self.texts)
-        text2 = np.random.choice(self.texts)
-
-        cx, cy = self.image_size[0] // 2, self.image_size[1] // 2
-        # TODO: 随机范围需要参数化
-        cx = np.random.randint(cx - 10, cx + 10)
-        cy = np.random.randint(cy - 80, cy + 80)
-
-        if code == SubtitlePairCode.NF1_NF2:
-            text1 = text2 = None
-            frame1, text1, bbox1, char_bboxes1 = add_text_to_image(frame1, text1, self.font, (cx, cy))
-            frame2, text2, bbox2, char_bboxes2 = add_text_to_image(frame2, text2, self.font, (cx, cy))
-            label = [-100, -100, -100, -100, 0]
-        elif code == SubtitlePairCode.NF1_F2:
-            frame1, text1, bbox1, char_bboxes1 = add_text_to_image(frame1, text1, self.font, (cx, cy))
-            frame2, text2, bbox2, char_bboxes2 = add_text_to_image(frame2, text2, self.font, (cx, cy))
-            label = [*bbox2, 0]
-        elif code == SubtitlePairCode.F1_NF2:
-            text2 = None
-            frame1, text1, bbox1, char_bboxes1 = add_text_to_image(frame1, text1, self.font, (cx, cy))
-            frame2, text2, bbox2, char_bboxes2 = add_text_to_image(frame2, text2, self.font, (cx, cy))
-            label = [-100, -100, -100, -100, 0]
-        elif code == SubtitlePairCode.F1_F2_DIFF:
-            if text1 == text2:
-                while text1 == text2:
-                    text2 = np.random.choice(self.texts)
-            frame1, text1, bbox1, char_bboxes1 = add_text_to_image(frame1, text1, self.font, (cx, cy))
-            frame2, text2, bbox2, char_bboxes2 = add_text_to_image(frame2, text2, self.font, (cx, cy))
-            label = [*bbox2, 0]
-        elif code == SubtitlePairCode.F1_F2_SAME:
-            text2 = text1
-            frame1, text1, bbox1, char_bboxes1 = add_text_to_image(frame1, text1, self.font, (cx, cy))
-            frame2, text2, bbox2, char_bboxes2 = add_text_to_image(frame2, text2, self.font, (cx, cy))
-            label = [*bbox2, 1]
-        else:
-            raise ValueError("Invalid code")
-
-        label = np.array(label, dtype=np.float32)
+        frame1_frame2 = self.data[index]
+        frame1 = frame1_frame2[:, :, :3]
+        frame2 = frame1_frame2[:, :, 3:]
+        label = self.labels[index]
 
         return (frame1, frame2), label
 
@@ -356,6 +368,19 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
         draw = frame2.copy()
         if x1 > 0:
             draw = cv2.rectangle(draw, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+        if code == SubtitlePairCode.NF1_NF2:
+            print("帧1和帧2都没有字幕")
+        elif code == SubtitlePairCode.NF1_F2:
+            print("帧1没有字幕，帧2有字幕")
+        elif code == SubtitlePairCode.F1_NF2:
+            print("帧1有字幕，帧2没有字幕")
+        elif code == SubtitlePairCode.F1_F2_DIFF:
+            print("帧1和帧2都有字幕，但字幕不同")
+        elif code == SubtitlePairCode.F1_F2_SAME:
+            print("帧1和帧2都有字幕，且字幕相同")
+        else:
+            raise ValueError("Invalid code")
 
         plt.imshow(frame1[:, :, ::-1], cmap="gray")
         plt.show()

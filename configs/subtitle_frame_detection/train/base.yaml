@@ -68,7 +68,7 @@ MODEL:
 
 LOSS:
   NAME: SubtitleFrameDetectionLoss
-  ARGS: 
+  ARGS:
     coord_loss_weight: 0.1
     code_loss_weight: 1.0
 
@@ -92,27 +92,25 @@ POSTPROCESSOR:
 
 METRIC:
   NAME: SubtitleFrameDetectionMetric
-  ARGS: 
-    score_threshold: 0.5
-    iou_threshold: 0.5
+  ARGS: {}
 
 HYPER:
   TRAIN:
-    epochs: 20
+    epochs: 40
     batch_size: 16
-    num_workers: 4
+    num_workers: 8
     pin_memory: True
     drop_last: True
     shuffle: True
   TEST:
     batch_size: 16
-    num_workers: 4
+    num_workers: 8
     pin_memory: True
     drop_last: True
     shuffle: False
   OTHERS:
     summary_dir: !env ${OUTPUT_DIR}/runs
-    checkpoint_dir: !env ${OUTPUT_DIR}/checkpoints
-    checkpoint_name: "checkpoint"
+    checkpoint_dir: !env ${OUTPUT_DIR}/checkpoints/base
+    checkpoint_name: "base"
     show_progress: True
     log_dir: !env ${OUTPUT_DIR}/logs

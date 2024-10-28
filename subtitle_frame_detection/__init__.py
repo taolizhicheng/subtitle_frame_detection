@@ -6,3 +6,4 @@ from . import scheduler
 from . import postprocessor
 from . import metric
 from . import trainer
+from . import inference
