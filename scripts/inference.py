@@ -13,12 +13,13 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video_path", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--config", type=str, required=True)
     return parser.parse_args()
 
 
 def main():
     args = get_args()
-    config = load_config(f"{MODULE_DIR}/configs/subtitle_frame_detection/inference/base.yaml")
+    config = load_config(args.config)
     inference = INFERENCE_BUILDER.build("SubtitleFrameDetectionInference", config)
 
     video_path = args.video_path

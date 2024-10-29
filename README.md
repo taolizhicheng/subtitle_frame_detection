@@ -80,7 +80,7 @@ label目录下的标签文件和video目录下的视频文件一一对应，格�
 
 执行训练脚本，根据`configs/train/base.yaml`中的配置进行训练：
 ```bash
-./scripts/train.sh
+./scripts/train.sh --config configs/train/base.yaml
 ```
 
 训练模型与结果在`outputs/checkpoints/base`目录下。
@@ -89,7 +89,7 @@ label目录下的标签文件和video目录下的视频文件一一对应，格�
 
 执行推理脚本，根据`configs/inference/base.yaml`中的配置进行推理（导入的模型文件需要根据情况进行修改）：
 ```bash
-./scripts/inference.sh --video_path /path/to/video --output_dir /path/to/output
+./scripts/inference.sh --video_path /path/to/video --output_dir /path/to/output --config configs/inference/base.yaml
 ```
 
 推理结果如下：
