@@ -4,6 +4,8 @@ DATASET:
     video_path: !env ${DATA_DIR}/video/damingwangchao/E01.mp4
     intervals: 5
     select_range: [0.2, 0.8, 0.8, 1]
+    image_width: 960
+    image_height: 320
     PREPROCESSOR:
       NAME: SubtitleFrameDetectionPreprocessor
       ARGS:
@@ -26,13 +28,14 @@ MODEL:
   NAME: SubtitleFrameDetectionModel
   ARGS:
     device: cuda
-    model_path: !env ${OUTPUT_DIR}/checkpoints/base/base_39.pth
+    model_path: !env ${OUTPUT_DIR}/checkpoints/base/base_35.pth
     input_channels: 8
     block: BasicBlock
     layers: [2, 2, 2, 2]
     num_classes: 1000
-    dcn: null
     stage_with_dcn: (False, False, False, False)
+    fallback_on_stride: False
+    with_modulated_dcn: False
 
 POSTPROCESSOR:
   NAME: InferenceSubtitleFrameDetectionPostprocessor

@@ -7,10 +7,11 @@ class SubtitleFrameDetectionTrainer(BaseTrainer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def before_train_epoch(self):
+    def before_train_epoch(self, epoch: int):
         self.logger.info("Random Load Train Dataset...")
-        self.train_dataset.random_load()
+        if epoch % 5 == 0 and epoch != 0:
+            self.train_dataset.random_load()
         self.logger.info("Train Dataset Loaded!")
         
-        super().before_train_epoch()
+        super().before_train_epoch(epoch)
 

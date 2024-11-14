@@ -2,6 +2,7 @@ import os
 import cv2
 import glob
 import json
+import tqdm
 import chardet
 import numpy as np
 import matplotlib.pyplot as plt
@@ -38,7 +39,7 @@ def add_text_to_image(image, text, font, position):
     @param      position : tuple, 文字中心位置
     """
     if text is None:
-        return image, None, None, None
+        return image.copy(), None, None, None
     
     h, w = image.shape[:2]
 
@@ -232,23 +233,37 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
         self.load_data()
 
     def load_images(self, index: int):
-        video_path = self.video_paths[index]
-        self.video = VideoFrameDataset(video_path, self.intervals)
+        self.images = np.zeros((25000, self.image_size[1], self.image_size[0], 3), dtype=np.uint8)
+        selected_paths = np.random.choice(self.video_paths, 10)
 
-        video_height, video_width = self.video.height, self.video.width
-        select_start_x = int(video_width * self.select_range[0])
-        select_end_x = int(video_width * self.select_range[1])
-        select_start_y = int(video_height * self.select_range[2])
-        select_end_y = int(video_height * self.select_range[3])
+        current_index = 0
 
-        start_x = np.random.randint(select_start_x, select_end_x - self.image_size[0])
-        start_y = np.random.randint(select_start_y, select_end_y - self.image_size[1])
+        for video_path in tqdm.tqdm(selected_paths):
+            video = VideoFrameDataset(video_path, self.intervals)
+            video_height, video_width = video.height, video.width
 
-        self.images = np.zeros((len(self.video), self.image_size[1], self.image_size[0], 3), dtype=np.uint8)
-        for i in range(len(self.video)):
-            frame, label = self.video[i]
-            frame = frame[start_y:start_y+self.image_size[1], start_x:start_x+self.image_size[0]]
-            self.images[i] = frame
+            select_start_x = int(video_width * self.select_range[0])
+            select_end_x = int(video_width * self.select_range[1])
+            select_start_y = int(video_height * self.select_range[2])
+            select_end_y = int(video_height * self.select_range[3])
+
+            start_x = np.random.randint(select_start_x, select_end_x - self.image_size[0] + 1)
+            start_y = np.random.randint(select_start_y, select_end_y - self.image_size[1] + 1)
+
+            num_frames = len(video)
+            num_selected_frames = 2000
+            start_index = np.random.randint(0, num_frames - num_selected_frames)
+            end_index = start_index + num_selected_frames
+
+            for i in range(start_index, end_index):
+                frame, label = video[i]
+                frame = frame[start_y:start_y+self.image_size[1], start_x:start_x+self.image_size[0]]
+                self.images[current_index] = frame
+                current_index += 1
+        
+        for i in range(current_index, 25000):
+            index = np.random.randint(0, 20000)
+            self.images[i] = self.images[index]
     
     def load_texts(self, index: int):
         text_path = self.text_paths[index]
@@ -276,6 +291,9 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
                     text = text[start:start+new_range]
 
                 self.texts.append(text)
+        
+        if len(self.texts) < 100:
+            raise ValueError("Too few texts")
     
     def load_font(self, index: int):
         font_path = self.font_paths[index]
@@ -288,6 +306,10 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
 
         frame1 = self.images[i]
         frame2 = self.images[i + 1]
+        frame1 = frame1.astype(np.float32) / 255.0 * 250
+        frame2 = frame2.astype(np.float32) / 255.0 * 250
+        frame1 = frame1.astype(np.uint8)
+        frame2 = frame2.astype(np.uint8)
 
         code = np.random.randint(0, 5)
         text1 = np.random.choice(self.texts)
@@ -315,6 +337,37 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
         frame1, text1, bbox1, char_bboxes1 = add_text_to_image(frame1, text1, self.font, (cx, cy))
         frame2, text2, bbox2, char_bboxes2 = add_text_to_image(frame2, text2, self.font, (cx, cy))
 
+        # if bbox1 is not None and bbox2 is not None:
+        #     if np.random.rand() < 0.5:
+        #         cx1, cy1, w1, h1 = bbox1
+        #         cx2, cy2, w2, h2 = bbox2
+        #         max_y = max(cy1 + h1 // 2, cy2 + h2 // 2)
+        #         if max_y < self.image_size[1] - 100:
+        #             y = np.random.randint(max_y + 20, self.image_size[1])
+        #             frame1[y:] = 0
+        #             frame2[y:] = 0
+        # elif bbox1 is not None and bbox2 is None:
+        #     if np.random.rand() < 0.5:
+        #         cx1, cy1, w1, h1 = bbox1
+        #         max_y = cy1 + h1 // 2
+        #         if max_y < self.image_size[1] - 100:
+        #             y = np.random.randint(max_y + 20, self.image_size[1])
+        #             frame1[y:] = 0
+        #             frame2[y:] = 0
+        # elif bbox1 is None and bbox2 is not None:
+        #     if np.random.rand() < 0.5:
+        #         cx2, cy2, w2, h2 = bbox2
+        #         max_y = cy2 + h2 // 2
+        #         if max_y < self.image_size[1] - 100:
+        #             y = np.random.randint(max_y + 20, self.image_size[1])
+        #             frame1[y:] = 0
+        #             frame2[y:] = 0
+        # else:
+        #     if np.random.rand() < 0.5:
+        #         y = np.random.randint(self.image_size[1] - 200, self.image_size[1])
+        #         frame1[y:] = 0
+        #         frame2[y:] = 0
+
         if bbox2 is not None:
             label = [*bbox2, code]
         else:
@@ -325,12 +378,18 @@ class SimulatedSubtitleFrameDetectionDataset(BaseDataset):
 
         self.data[i] = frame
         self.labels[i] = label
+        self.text_pairs.append((text1, text2))
 
     def load_data(self):
         self.data = np.zeros((len(self.images) - 1, self.image_size[1], self.image_size[0], 6), dtype=np.uint8)
         self.labels = np.zeros((len(self.images) - 1, 5), dtype=np.float32)
-        for i in range(len(self.data)):
+        self.text_pairs = []
+
+        progress_bar = tqdm.tqdm(range(len(self.data)), desc="Loading data")
+        for i in progress_bar:
             self.load_single_data(i)
+            progress_bar.update(1)
+        progress_bar.close()
 
     def random_load(self):
         image_index = np.random.randint(0, len(self.video_paths))

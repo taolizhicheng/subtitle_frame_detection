@@ -32,7 +32,7 @@ def main():
         os.makedirs(output_dir)
 
     config["DATASET"]["ARGS"]["video_path"] = video_path
-    results = inference.inference(**config)
+    results, _ = inference.inference(**config)
 
     for i, result in enumerate(results):
         start_time = result["start_time"]

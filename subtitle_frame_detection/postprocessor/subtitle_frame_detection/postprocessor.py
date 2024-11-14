@@ -60,6 +60,8 @@ class InferenceSubtitleFrameDetectionPostprocessor(BasePostprocessor):
         output: torch.Tensor,
     ):
         coord = output[:, :4]
+        coords = coord.cpu().numpy()
+
         codes_ = output[:, 4:]
         probs = torch.softmax(codes_, dim=-1)
         code = torch.argmax(probs, dim=-1)
@@ -70,6 +72,6 @@ class InferenceSubtitleFrameDetectionPostprocessor(BasePostprocessor):
         data = data.cpu().numpy()
 
         results = []
-        for prob, c in zip(probs, code): 
-            results.append((c, prob))
+        for prob, c, coord in zip(probs, code, coords): 
+            results.append((c, prob, coord))
         return data, label, results

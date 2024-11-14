@@ -44,12 +44,15 @@ class GTSubtitleFrameDetectionDataset(BaseDataset):
         **kwargs
     ):
         self.video_dir = video_dir
-        self.video_paths = glob.glob(os.path.join(video_dir, "**/*.mp4"), recursive=True)
-        self.video_paths = sorted(self.video_paths)
         self.intervals = intervals
         self.label_dir = label_dir
         self.label_paths = glob.glob(os.path.join(label_dir, "**/*.json"), recursive=True)
         self.label_paths = sorted(self.label_paths)
+        self.video_paths = []
+        for path in self.label_paths:
+            video_path = path.replace(self.label_dir, self.video_dir)
+            video_path = video_path[:-5] + ".mp4"
+            self.video_paths.append(video_path)
         self.video = None
         self.labels = None
         self.images = None

@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
@@ -20,12 +21,16 @@ class InferenceSubtitleFrameDetectionDataset(BaseDataset):
         video_path: str,
         intervals: int,
         select_range: List[float],
+        image_width: int,
+        image_height: int,
         **kwargs
     ):
         super().__init__(
             video_path=video_path,
             intervals=intervals,
             select_range=select_range,
+            image_width=image_width,
+            image_height=image_height,
             **kwargs
         )
 
@@ -33,11 +38,15 @@ class InferenceSubtitleFrameDetectionDataset(BaseDataset):
         self, 
         video_path: str,
         intervals: int,
-        select_range: List[float]
+        select_range: List[float],
+        image_width: int,
+        image_height: int,
     ):
         self.video_path = video_path
         self.intervals = intervals
         self.select_range = select_range
+        self.image_width = image_width
+        self.image_height = image_height
 
         self.video = VideoFrameDataset(video_path, intervals)
 
@@ -53,12 +62,17 @@ class InferenceSubtitleFrameDetectionDataset(BaseDataset):
             y1 = int(y1 * self.video.height)
             y2 = int(y2 * self.video.height)
 
-        self.images = np.zeros((len(self.video), (y2 - y1), (x2 - x1), 3), dtype=np.uint8)
+        self.images = np.zeros((len(self.video), self.image_height, self.image_width, 3), dtype=np.uint8)
+
+        w, h = x2 - x1, y2 - y1
+        scale = min(self.image_width / w, self.image_height / h)
+        nh, nw = int(h * scale), int(w * scale)
 
         for i in range(len(self.video)):
             frame, label = self.video[i]
             frame = frame[y1:y2, x1:x2]
-            self.images[i] = frame
+            frame = cv2.resize(frame, (nw, nh))
+            self.images[i, :nh, :nw] = frame
     
     def get_data(self, index: int):
         frame1 = self.images[index]

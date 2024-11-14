@@ -9,7 +9,7 @@ DATASET:
       text_dir: !env ${DATA_DIR}/text
       text_length_range: [1, 20]
       font_dir: !env ${DATA_DIR}/font
-      font_size_range: [25, 50]
+      font_size_range: [25, 70]
       PREPROCESSOR:
         NAME: SubtitleFrameDetectionPreprocessor
         ARGS:
@@ -21,6 +21,11 @@ DATASET:
           ARGS:
             lower_noise: -20
             upper_noise: 20
+        # - NAME: SubtitleFrameDetectionRandomGrids
+        #   ARGS:
+        #     probability: 0.5
+        #     x_interval_range: [10, 30]
+        #     y_interval_range: [10, 30]
         - NAME: SubtitleFrameDetectionNormalize
           ARGS:
             mean: [0, 0, 0]
@@ -59,12 +64,14 @@ MODEL:
   NAME: SubtitleFrameDetectionModel
   ARGS:
     device: cuda
+    model_path: !env ${OUTPUT_DIR}/checkpoints/base/base_39.pth
     input_channels: 8
     block: BasicBlock
     layers: [2, 2, 2, 2]
     num_classes: 1000
-    dcn: null
     stage_with_dcn: (False, False, False, False)
+    fallback_on_stride: False
+    with_modulated_dcn: False
 
 LOSS:
   NAME: SubtitleFrameDetectionLoss

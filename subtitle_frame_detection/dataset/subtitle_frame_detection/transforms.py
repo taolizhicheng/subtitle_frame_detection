@@ -18,6 +18,40 @@ def __dir__():
     return __all__
 
 
+@TRANSFORM_BUILDER.register("SubtitleFrameDetectionRandomGrids")
+class SubtitleFrameDetectionRandomGrids(BaseTransform):
+    def __init__(self, probability: float, x_interval_range: list, y_interval_range: list):
+        super().__init__()
+        self.probability = probability
+        self.x_interval_range = x_interval_range
+        self.y_interval_range = y_interval_range
+    
+    def __call__(self, data, label):
+        if np.random.rand() > self.probability:
+            return data, label
+
+        if len(data) == 3:
+            frame1, frame2, positions = data
+        else:
+            frame1, frame2 = data
+
+        h, w = frame1.shape[:2]
+
+        x_interval = np.random.randint(self.x_interval_range[0], self.x_interval_range[1] + 1)
+        y_interval = np.random.randint(self.y_interval_range[0], self.y_interval_range[1] + 1)
+
+        start_x = np.random.randint(0, x_interval)
+        start_y = np.random.randint(0, y_interval)
+
+        frame1[start_y::y_interval, start_x::x_interval, :] = 0
+        frame2[start_y::y_interval, start_x::x_interval, :] = 0
+        
+        if len(data) == 3:
+            return (frame1, frame2, positions), label
+
+        return (frame1, frame2), label
+
+
 @TRANSFORM_BUILDER.register("SubtitleFrameDetectionNoise")
 class SubtitleFrameDetectionNoise(BaseTransform):
     def __init__(self, lower_noise: float, upper_noise: float):

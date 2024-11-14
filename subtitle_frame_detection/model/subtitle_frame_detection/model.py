@@ -24,8 +24,9 @@ class SubtitleFrameDetectionModel(BaseModel):
         block = "BasicBlock",
         layers = [2, 2, 2, 2],
         num_classes=1000,
-        dcn=None,
-        stage_with_dcn=(False, False, False, False)
+        stage_with_dcn=(False, False, False, False),
+        fallback_on_stride=False,
+        with_modulated_dcn=False    
     ):
         super().__init__(
             device=device,
@@ -34,8 +35,9 @@ class SubtitleFrameDetectionModel(BaseModel):
             block=block,
             layers=layers,
             num_classes=num_classes,
-            dcn=dcn,
-            stage_with_dcn=stage_with_dcn
+            stage_with_dcn=stage_with_dcn,
+            fallback_on_stride=fallback_on_stride,
+            with_modulated_dcn=with_modulated_dcn
         )
     
     def _get_block(self, block):
@@ -78,16 +80,18 @@ class SubtitleFrameDetectionModel(BaseModel):
         block,
         layers,
         num_classes,
-        dcn,
-        stage_with_dcn
+        stage_with_dcn,
+        fallback_on_stride,
+        with_modulated_dcn
     ):
         self.backbone = ResNet(
             input_channels = input_channels,
             block = self._get_block(block),
             layers = layers,
             num_classes=num_classes,
-            dcn=dcn,
-            stage_with_dcn=stage_with_dcn
+            stage_with_dcn=stage_with_dcn,
+            fallback_on_stride=fallback_on_stride,
+            with_modulated_dcn=with_modulated_dcn
         )
         self.avgpool1 = torch.nn.AdaptiveAvgPool2d((1, 1))
         self.fc1 = torch.nn.Linear(64, 512)
